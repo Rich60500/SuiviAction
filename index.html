@@ -369,6 +369,66 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .loading-box .sp-spin { width:20px; height:20px; border-width:3px; }
 @media(max-width:768px){ #sp-status{ left:0; } }
 
+
+/* ── Modale Google Drive ─────────────────────────────────────────── */
+#drive-modal {
+  display:none; position:fixed; inset:0; z-index:9995;
+  background:rgba(0,0,0,.55); align-items:center; justify-content:center;
+}
+#drive-modal.open { display:flex; }
+.drive-box {
+  background:#fff; border-radius:12px; padding:28px 28px 22px;
+  box-shadow:0 12px 40px rgba(0,0,0,.25); width:440px; max-width:95vw;
+}
+.drive-box h3 {
+  font-family:'Outfit',sans-serif; font-size:1.05rem;
+  font-weight:700; color:var(--navy); margin-bottom:6px;
+  display:flex; align-items:center; gap:8px;
+}
+.drive-box p { font-size:.83rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
+.drive-box label { font-size:.78rem; font-weight:600; color:var(--navy); display:block; margin-bottom:5px; }
+.drive-input {
+  width:100%; padding:9px 12px;
+  border:1.5px solid var(--border); border-radius:7px;
+  font-size:.87rem; outline:none; margin-bottom:6px;
+  transition:border-color var(--tr);
+}
+.drive-input:focus { border-color:var(--navy-l); }
+.drive-name {
+  width:100%; padding:8px 12px;
+  border:1.5px solid var(--border); border-radius:7px;
+  font-size:.85rem; outline:none; margin-bottom:14px;
+  transition:border-color var(--tr);
+}
+.drive-name:focus { border-color:var(--navy-l); }
+.drive-btns { display:flex; gap:8px; justify-content:flex-end; }
+.drive-preview {
+  display:none; margin-bottom:12px; padding:10px 12px;
+  background:var(--bg); border-radius:8px; border:1px solid var(--border);
+  font-size:.82rem; color:var(--navy); align-items:center; gap:10px;
+}
+.drive-preview.show { display:flex; }
+.drive-preview .drive-icon { font-size:1.4rem; flex-shrink:0; }
+.drive-preview .drive-info { flex:1; overflow:hidden; }
+.drive-preview .drive-fname { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.drive-preview .drive-ftype { font-size:.72rem; color:var(--muted); }
+
+/* Rendu lien Drive dans les bulles */
+.jbf-drive {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 12px; background:var(--bg); border-radius:8px;
+  border:1px solid var(--border); cursor:pointer; text-decoration:none;
+  color:var(--text); transition:background var(--tr); max-width:280px;
+}
+.jbf-drive:hover { background:var(--blue-bg); }
+.jbf-drive .drive-ic { font-size:1.3rem; flex-shrink:0; }
+.jbf-drive .drive-nm { font-size:.82rem; font-weight:600; overflow:hidden;
+                        text-overflow:ellipsis; white-space:nowrap; flex:1; }
+.jbf-drive .drive-badge {
+  font-size:.65rem; background:#4285F4; color:#fff;
+  padding:1px 6px; border-radius:10px; flex-shrink:0; font-weight:600;
+}
+
 </style>
 </head>
 <body>
@@ -486,6 +546,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <input type="file" id="fj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
             style="display:none" onchange="handleFilePick(this,'fj-preview')">
           <span id="fj-warn" style="font-size:.69rem;color:var(--orange)"></span>
+          <button class="ja-btn" type="button" onclick="openDriveModal('fj-preview')">🔗 Lien Google Drive</button>
         </div>
         <div class="ja-wrap" id="fj-preview"></div>
         <div class="jhelp">La note sera horodatée à l'enregistrement · Images compressées auto</div>
@@ -545,9 +606,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <input type="file" id="dj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           style="display:none" onchange="handleFilePick(this,'dj-preview')">
         <span id="dj-warn" style="font-size:.69rem;color:var(--orange)"></span>
+        <button class="ja-btn" type="button" onclick="openDriveModal('dj-preview')">🔗 Lien Google Drive</button>
       </div>
       <div class="ja-wrap" id="dj-preview"></div>
-      <div class="jhelp">Ctrl+Entrée pour envoyer · Images compressées auto · max 50 Mo/fichier sur SharePoint</div>
+      <div class="jhelp">Ctrl+Entrée pour envoyer · Images compressées auto</div>
     </div>
     </div>
   </div></div>
@@ -1357,6 +1419,15 @@ function renderPending(previewId) {
   wrap.innerHTML = files.map((f, i) => {
     const src  = f.url || f.dataUrl || '';
     const isImg = f.type && f.type.startsWith('image/');
+    // Lien Drive
+    if (f.type === 'drive') {
+      return `<div class="ja-file" onclick="window.open('${src}','_blank')" style="border-color:#4285F4;background:#f0f4ff">
+        <span>${f.icon||'🔗'}</span>
+        <span class="ja-fname" title="${esc(f.name)}">${esc(f.name)}</span>
+        <span class="ja-size" style="color:#4285F4;font-weight:600">Drive</span>
+        <button class="ja-del" onclick="event.stopPropagation();removePending('${previewId}',${i})">✕</button>
+      </div>`;
+    }
     if (isImg) {
       return `<div class="ja-thumb">
         <img src="${src}" alt="${esc(f.name)}" onclick="openLightbox('${src}','${esc(f.name)}')">
@@ -1393,14 +1464,21 @@ function renderAttachments(attachments) {
     // Supports both: { url: '...' } (SharePoint) and { dataUrl: '...' } (local base64)
     const src = f.url || f.dataUrl || '';
     const isImg = f.type && f.type.startsWith('image/');
+    // Lien Google Drive
+    if (f.type === 'drive') {
+      return `<a class="jbf-drive" href="${src}" target="_blank" rel="noopener" title="${esc(f.name)}">
+        <span class="drive-ic">${f.icon||'🔗'}</span>
+        <span class="drive-nm">${esc(f.name)}</span>
+        <span class="drive-badge">Drive</span>
+      </a>`;
+    }
     if (isImg) {
       return `<div class="jbf-img" onclick="openLightbox('${src}','${esc(f.name)}')" title="${esc(f.name)}">
         <img src="${src}" alt="${esc(f.name)}">
       </div>`;
     } else {
-      const href = f.spFile ? src : src; // SP files open directly
-      const dl   = f.spFile ? '' : `download="${esc(f.name)}"`;
-      return `<a class="jbf-doc" href="${href}" ${dl} target="_blank" rel="noopener" title="${esc(f.name)}">
+      const dl = f.spFile ? '' : `download="${esc(f.name)}"`;
+      return `<a class="jbf-doc" href="${src}" ${dl} target="_blank" rel="noopener" title="${esc(f.name)}">
         ${fileIcon(f.type||'')} <span>${esc(f.name)}</span>
       </a>`;
     }
@@ -1423,6 +1501,86 @@ function closeLightbox() {
   document.getElementById('lightbox-img').src = '';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+
+// ═══ GOOGLE DRIVE LINKS ════════════════════════════════════════════════════════
+let _driveTargetPreview = null;
+
+function openDriveModal(previewId) {
+  _driveTargetPreview = previewId;
+  document.getElementById('drive-url').value  = '';
+  document.getElementById('drive-name').value = '';
+  document.getElementById('drive-preview').classList.remove('show');
+  document.getElementById('drive-modal').classList.add('open');
+  setTimeout(() => document.getElementById('drive-url').focus(), 100);
+}
+
+function closeDriveModal() {
+  document.getElementById('drive-modal').classList.remove('open');
+  _driveTargetPreview = null;
+}
+
+// Détecter le type de fichier depuis l'URL Drive
+function driveFileType(url) {
+  if (url.includes('/document/'))    return { icon:'📝', label:'Google Docs' };
+  if (url.includes('/spreadsheets/'))return { icon:'📊', label:'Google Sheets' };
+  if (url.includes('/presentation/'))return { icon:'📊', label:'Google Slides' };
+  if (url.includes('/file/'))        return { icon:'📄', label:'Fichier Drive' };
+  if (url.includes('docs.google'))   return { icon:'📝', label:'Google Docs' };
+  return { icon:'🔗', label:'Google Drive' };
+}
+
+// Extraire l'ID Drive depuis l'URL pour construire un lien direct
+function driveDirectUrl(url) {
+  // Format: https://drive.google.com/file/d/[ID]/view
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
+  // Format: https://docs.google.com/...
+  if (url.includes('docs.google.com') || url.includes('drive.google.com')) return url;
+  return url;
+}
+
+function onDriveUrlChange(url) {
+  const prev    = document.getElementById('drive-preview');
+  const prevName= document.getElementById('drive-prev-name');
+  const prevType= document.getElementById('drive-prev-icon');
+  const prevLbl = document.getElementById('drive-prev-type');
+
+  if (!url || (!url.includes('drive.google') && !url.includes('docs.google'))) {
+    prev.classList.remove('show');
+    return;
+  }
+  const ft = driveFileType(url);
+  prevType.textContent = ft.icon;
+  prevLbl.textContent  = ft.label;
+  const nameInput = document.getElementById('drive-name').value;
+  prevName.textContent = nameInput || 'Fichier Google Drive';
+  prev.classList.add('show');
+}
+
+
+
+function confirmDriveLink() {
+  const url  = document.getElementById('drive-url').value.trim();
+  const name = document.getElementById('drive-name').value.trim() || 'Fichier Google Drive';
+
+  if (!url) { toast('Colle un lien Google Drive', 'error'); return; }
+  if (!url.includes('google.com')) { toast('Ce lien ne semble pas être un lien Google Drive', 'error'); return; }
+
+  const ft     = driveFileType(url);
+  const direct = driveDirectUrl(url);
+  const entry  = { url: direct, name, type: 'drive', driveType: ft.label, icon: ft.icon, spFile: true };
+
+  if (_driveTargetPreview) {
+    pendingFiles[_driveTargetPreview] = pendingFiles[_driveTargetPreview] || [];
+    pendingFiles[_driveTargetPreview].push(entry);
+    renderPending(_driveTargetPreview);
+  }
+  closeDriveModal();
+  toast('Lien Google Drive ajouté ✓', 'success');
+}
+
+// Fermeture modale gérée via onclick sur le div
 
 // ═══ ARCHIVES ═════════════════════════════════════════════════════════════════
 const ARCH_KEY   = 'sncf_archives_v3';
@@ -1673,6 +1831,40 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 <div id="sp-status" class="hidden">
   <div class="sp-dot"></div>
   <span id="sp-status-txt"></span>
+</div>
+
+
+<!-- Modale Google Drive -->
+<div id="drive-modal" onclick="if(event.target===this)closeDriveModal()">
+  <div class="drive-box">
+    <h3>🔗 Lier un fichier Google Drive</h3>
+    <p>
+      1. Ouvre Google Drive → clic droit sur ton fichier → <strong>Obtenir le lien</strong><br>
+      2. Règle le partage sur <strong>"Toute personne avec le lien"</strong><br>
+      3. Colle le lien ci-dessous
+    </p>
+    <button class="btn btn-o btn-sm" style="margin-bottom:14px;width:100%"
+      onclick="window.open('https://drive.google.com','_blank')">
+      📂 Ouvrir Google Drive
+    </button>
+    <label>Lien Google Drive *</label>
+    <input class="drive-input" id="drive-url" type="url"
+      placeholder="https://drive.google.com/file/d/..."
+      oninput="onDriveUrlChange(this.value)">
+    <label>Nom du fichier</label>
+    <input class="drive-name" id="drive-name" placeholder="ex: Photo_coffret_AP2.jpg" oninput="const p=document.getElementById('drive-prev-name');if(p)p.textContent=this.value||'Fichier Google Drive'">
+    <div class="drive-preview" id="drive-preview">
+      <span class="drive-icon" id="drive-prev-icon">📄</span>
+      <div class="drive-info">
+        <div class="drive-fname" id="drive-prev-name">—</div>
+        <div class="drive-ftype" id="drive-prev-type">Google Drive</div>
+      </div>
+    </div>
+    <div class="drive-btns">
+      <button class="btn btn-o btn-sm" onclick="closeDriveModal()">Annuler</button>
+      <button class="btn btn-p btn-sm" onclick="confirmDriveLink()">✅ Joindre ce fichier</button>
+    </div>
+  </div>
 </div>
 
 </body>
