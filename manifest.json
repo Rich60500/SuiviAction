@@ -1,0 +1,34 @@
+{
+  "name": "Suivi Actions SNCF Ligne C",
+  "short_name": "Actions SNCF",
+  "description": "Suivi des actions maintenance désenfumage VMI — Société Denis / SNCF Réseau",
+  "start_url": "/SuiviAction/index.html",
+  "scope": "/SuiviAction/",
+  "display": "standalone",
+  "background_color": "#1A3C6E",
+  "theme_color": "#1A3C6E",
+  "orientation": "any",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231A3C6E'/><text y='140' x='20' font-size='130' font-family='serif' fill='%23F5A623'>⚡</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231A3C6E'/><text y='380' x='50' font-size='360' font-family='serif' fill='%23F5A623'>⚡</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity","business"],
+  "shortcuts": [
+    {
+      "name": "Nouvelle action",
+      "short_name": "Ajouter",
+      "url": "/SuiviAction/index.html"
+    }
+  ]
+}
