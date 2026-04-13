@@ -1,6 +1,6 @@
 // Service Worker — Suivi Actions SNCF
 // Base path GitHub Pages : /SuiviAction/
-const CACHE   = 'sncf-actions-v4';
+const CACHE   = 'sncf-actions-v5';
 const BASE    = '/SuiviAction';
 const ASSETS  = [
   `${BASE}/`,

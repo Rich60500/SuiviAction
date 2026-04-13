@@ -546,7 +546,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <input type="file" id="fj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
             style="display:none" onchange="handleFilePick(this,'fj-preview')">
           <span id="fj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-          <button class="ja-btn" type="button" onclick="openDriveModal('fj-preview')">🔗 Lien Google Drive</button>
+          <button class="ja-btn" type="button" onclick="openDriveModal('fj-preview')">🔗 Insérer lien Drive</button>
         </div>
         <div class="ja-wrap" id="fj-preview"></div>
         <div class="jhelp">La note sera horodatée à l'enregistrement · Images compressées auto</div>
@@ -606,7 +606,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <input type="file" id="dj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           style="display:none" onchange="handleFilePick(this,'dj-preview')">
         <span id="dj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-        <button class="ja-btn" type="button" onclick="openDriveModal('dj-preview')">🔗 Lien Google Drive</button>
+        <button class="ja-btn" type="button" onclick="openDriveModal('dj-preview')">🔗 Insérer lien Drive</button>
       </div>
       <div class="ja-wrap" id="dj-preview"></div>
       <div class="jhelp">Ctrl+Entrée pour envoyer · Images compressées auto</div>
@@ -1567,17 +1567,21 @@ function confirmDriveLink() {
   if (!url) { toast('Colle un lien Google Drive', 'error'); return; }
   if (!url.includes('google.com')) { toast('Ce lien ne semble pas être un lien Google Drive', 'error'); return; }
 
-  const ft     = driveFileType(url);
   const direct = driveDirectUrl(url);
-  const entry  = { url: direct, name, type: 'drive', driveType: ft.label, icon: ft.icon, spFile: true };
 
-  if (_driveTargetPreview) {
-    pendingFiles[_driveTargetPreview] = pendingFiles[_driveTargetPreview] || [];
-    pendingFiles[_driveTargetPreview].push(entry);
-    renderPending(_driveTargetPreview);
+  // Insérer le lien dans le textarea actif (formulaire ou détail)
+  const taId = _driveTargetPreview === 'fj-preview' ? 'fj-input' : 'dj-input';
+  const ta   = document.getElementById(taId);
+  if (ta) {
+    const linkText = `\n📎 ${name} → ${direct}`;
+    const pos = ta.selectionStart || ta.value.length;
+    ta.value = ta.value.slice(0, pos) + linkText + ta.value.slice(pos);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = pos + linkText.length;
   }
+
   closeDriveModal();
-  toast('Lien Google Drive ajouté ✓', 'success');
+  toast('Lien inséré dans la note ✓', 'success');
 }
 
 // Fermeture modale gérée via onclick sur le div
@@ -1837,7 +1841,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 <!-- Modale Google Drive -->
 <div id="drive-modal" onclick="if(event.target===this)closeDriveModal()">
   <div class="drive-box">
-    <h3>🔗 Lier un fichier Google Drive</h3>
+    <h3>🔗 Insérer un lien Google Drive</h3>
     <p>
       1. Ouvre Google Drive → clic droit sur ton fichier → <strong>Obtenir le lien</strong><br>
       2. Règle le partage sur <strong>"Toute personne avec le lien"</strong><br>
@@ -1862,7 +1866,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     </div>
     <div class="drive-btns">
       <button class="btn btn-o btn-sm" onclick="closeDriveModal()">Annuler</button>
-      <button class="btn btn-p btn-sm" onclick="confirmDriveLink()">✅ Joindre ce fichier</button>
+      <button class="btn btn-p btn-sm" onclick="confirmDriveLink()">✅ Insérer le lien dans la note</button>
     </div>
   </div>
 </div>
