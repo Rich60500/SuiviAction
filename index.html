@@ -370,64 +370,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 @media(max-width:768px){ #sp-status{ left:0; } }
 
 
-/* ── Modale Google Drive ─────────────────────────────────────────── */
-#drive-modal {
-  display:none; position:fixed; inset:0; z-index:9995;
-  background:rgba(0,0,0,.55); align-items:center; justify-content:center;
-}
-#drive-modal.open { display:flex; }
-.drive-box {
-  background:#fff; border-radius:12px; padding:28px 28px 22px;
-  box-shadow:0 12px 40px rgba(0,0,0,.25); width:440px; max-width:95vw;
-}
-.drive-box h3 {
-  font-family:'Outfit',sans-serif; font-size:1.05rem;
-  font-weight:700; color:var(--navy); margin-bottom:6px;
-  display:flex; align-items:center; gap:8px;
-}
-.drive-box p { font-size:.83rem; color:var(--muted); margin-bottom:14px; line-height:1.5; }
-.drive-box label { font-size:.78rem; font-weight:600; color:var(--navy); display:block; margin-bottom:5px; }
-.drive-input {
-  width:100%; padding:9px 12px;
-  border:1.5px solid var(--border); border-radius:7px;
-  font-size:.87rem; outline:none; margin-bottom:6px;
-  transition:border-color var(--tr);
-}
-.drive-input:focus { border-color:var(--navy-l); }
-.drive-name {
-  width:100%; padding:8px 12px;
-  border:1.5px solid var(--border); border-radius:7px;
-  font-size:.85rem; outline:none; margin-bottom:14px;
-  transition:border-color var(--tr);
-}
-.drive-name:focus { border-color:var(--navy-l); }
-.drive-btns { display:flex; gap:8px; justify-content:flex-end; }
-.drive-preview {
-  display:none; margin-bottom:12px; padding:10px 12px;
-  background:var(--bg); border-radius:8px; border:1px solid var(--border);
-  font-size:.82rem; color:var(--navy); align-items:center; gap:10px;
-}
-.drive-preview.show { display:flex; }
-.drive-preview .drive-icon { font-size:1.4rem; flex-shrink:0; }
-.drive-preview .drive-info { flex:1; overflow:hidden; }
-.drive-preview .drive-fname { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.drive-preview .drive-ftype { font-size:.72rem; color:var(--muted); }
-
-/* Rendu lien Drive dans les bulles */
-.jbf-drive {
-  display:flex; align-items:center; gap:8px;
-  padding:7px 12px; background:var(--bg); border-radius:8px;
-  border:1px solid var(--border); cursor:pointer; text-decoration:none;
-  color:var(--text); transition:background var(--tr); max-width:280px;
-}
-.jbf-drive:hover { background:var(--blue-bg); }
-.jbf-drive .drive-ic { font-size:1.3rem; flex-shrink:0; }
-.jbf-drive .drive-nm { font-size:.82rem; font-weight:600; overflow:hidden;
-                        text-overflow:ellipsis; white-space:nowrap; flex:1; }
-.jbf-drive .drive-badge {
-  font-size:.65rem; background:#4285F4; color:#fff;
-  padding:1px 6px; border-radius:10px; flex-shrink:0; font-weight:600;
-}
 
 </style>
 </head>
@@ -546,7 +488,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <input type="file" id="fj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
             style="display:none" onchange="handleFilePick(this,'fj-preview')">
           <span id="fj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-          <button class="ja-btn" type="button" onclick="openDriveModal('fj-preview')">🔗 Insérer lien Drive</button>
+          <button class="ja-btn" type="button" onclick="pasteDriveLink('fj-input')" title="Copier le lien dans Drive puis cliquer ici">📋 Coller lien Drive</button>
         </div>
         <div class="ja-wrap" id="fj-preview"></div>
         <div class="jhelp">La note sera horodatée à l'enregistrement · Images compressées auto</div>
@@ -606,7 +548,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <input type="file" id="dj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           style="display:none" onchange="handleFilePick(this,'dj-preview')">
         <span id="dj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-        <button class="ja-btn" type="button" onclick="openDriveModal('dj-preview')">🔗 Insérer lien Drive</button>
+        <button class="ja-btn" type="button" onclick="pasteDriveLink('dj-input')" title="Copier le lien dans Drive puis cliquer ici">📋 Coller lien Drive</button>
       </div>
       <div class="ja-wrap" id="dj-preview"></div>
       <div class="jhelp">Ctrl+Entrée pour envoyer · Images compressées auto</div>
@@ -1058,7 +1000,10 @@ function renderList(){
     <td>${sBadge(a.statut)}</td>
     <td>${pBar(a.avancement)}</td>
     <td>${daysHtml(a.echeance,a.statut)}</td>
-    <td><button class="btn btn-o btn-sm" onclick="event.stopPropagation();startEdit(${a.id})">✏️</button></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-o btn-sm" onclick="event.stopPropagation();startEdit(${a.id})" title="Modifier">✏️</button>
+      ${a.statut==='Terminée' ? `<button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border:1px solid #a9dfbf;margin-left:4px" onclick="event.stopPropagation();archiveFromList(${a.id})" title="Archiver">🗄️</button>` : ''}
+    </td>
   </tr>`).join('');
 }
 
@@ -1134,8 +1079,14 @@ function startEdit(id){
 }
 
 function onSlide(v){
-  document.getElementById('f-pct-lbl').textContent=v+'%';
-  document.getElementById('arch-hint').classList.toggle('show',parseInt(v)>=100&&document.getElementById('fst').value!=='Terminée');
+  const pct = parseInt(v);
+  document.getElementById('f-pct-lbl').textContent = v+'%';
+  // Auto "En cours" si avancement > 0 et pas encore Terminée
+  const statSel = document.getElementById('fst');
+  if(pct > 0 && statSel.value === 'Non commencée') {
+    statSel.value = 'En cours';
+  }
+  document.getElementById('arch-hint').classList.toggle('show', pct>=100 && statSel.value!=='Terminée');
 }
 
 function onStatutChange(val){
@@ -1228,6 +1179,17 @@ function deleteAction(){
 }
 
 // ═══ ARCHIVAGE ════════════════════════════════════════════════════════════════
+function archiveFromList(id){
+  const a = DB.find(x=>x.id===id);
+  if(!a) return;
+  if(!confirm('Archiver « '+a.dossier+' » ?\nElle sera déplacée dans les archives.')) return;
+  _doArchive(id);
+  persist();
+  renderList();
+  renderDash();
+  toast('Action archivée ✓','success');
+}
+
 function _doArchive(id){
   const a=DB.find(x=>x.id===id);
   if(!a) return;
@@ -1586,6 +1548,46 @@ function confirmDriveLink() {
 
 // Fermeture modale gérée via onclick sur le div
 
+
+// ═══ GOOGLE DRIVE — COLLER DEPUIS PRESSE-PAPIER ══════════════════════════════
+function driveDirectUrl(url) {
+  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return 'https://drive.google.com/file/d/' + m[1] + '/view';
+  return url;
+}
+function driveLabel(url) {
+  if (url.includes('/document/'))     return '📝 Google Doc';
+  if (url.includes('/spreadsheets/')) return '📊 Google Sheet';
+  if (url.includes('/presentation/')) return '📊 Google Slides';
+  if (url.includes('/file/'))         return '📄 Fichier Drive';
+  return '🔗 Google Drive';
+}
+async function pasteDriveLink(textareaId) {
+  let url = '';
+  try {
+    url = await navigator.clipboard.readText();
+  } catch(e) {
+    url = prompt('Colle le lien Google Drive :') || '';
+  }
+  url = url.trim();
+  if (!url) return;
+  if (!url.includes('google.com') && !url.includes('drive.')) {
+    toast('Le presse-papier ne contient pas un lien Google Drive', 'error');
+    return;
+  }
+  const direct = driveDirectUrl(url);
+  const label  = driveLabel(url);
+  const ta     = document.getElementById(textareaId);
+  if (!ta) return;
+  const pos      = ta.selectionStart !== undefined ? ta.selectionStart : ta.value.length;
+  const prefix   = (ta.value.length > 0 && !ta.value.endsWith('\n')) ? '\n' : '';
+  const linkText = prefix + '\u{1F4CE} ' + label + ' \u2192 ' + direct;
+  ta.value = ta.value.slice(0, pos) + linkText + ta.value.slice(pos);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = pos + linkText.length;
+  toast('\u2705 Lien Drive inséré dans la note', 'success');
+}
+
 // ═══ ARCHIVES ═════════════════════════════════════════════════════════════════
 const ARCH_KEY   = 'sncf_archives_v3';
 const ARCH_DAYS  = 30;   // rotation auto après N jours "Terminée"
@@ -1838,38 +1840,6 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 </div>
 
 
-<!-- Modale Google Drive -->
-<div id="drive-modal" onclick="if(event.target===this)closeDriveModal()">
-  <div class="drive-box">
-    <h3>🔗 Insérer un lien Google Drive</h3>
-    <p>
-      1. Ouvre Google Drive → clic droit sur ton fichier → <strong>Obtenir le lien</strong><br>
-      2. Règle le partage sur <strong>"Toute personne avec le lien"</strong><br>
-      3. Colle le lien ci-dessous
-    </p>
-    <button class="btn btn-o btn-sm" style="margin-bottom:14px;width:100%"
-      onclick="window.open('https://drive.google.com','_blank')">
-      📂 Ouvrir Google Drive
-    </button>
-    <label>Lien Google Drive *</label>
-    <input class="drive-input" id="drive-url" type="url"
-      placeholder="https://drive.google.com/file/d/..."
-      oninput="onDriveUrlChange(this.value)">
-    <label>Nom du fichier</label>
-    <input class="drive-name" id="drive-name" placeholder="ex: Photo_coffret_AP2.jpg" oninput="const p=document.getElementById('drive-prev-name');if(p)p.textContent=this.value||'Fichier Google Drive'">
-    <div class="drive-preview" id="drive-preview">
-      <span class="drive-icon" id="drive-prev-icon">📄</span>
-      <div class="drive-info">
-        <div class="drive-fname" id="drive-prev-name">—</div>
-        <div class="drive-ftype" id="drive-prev-type">Google Drive</div>
-      </div>
-    </div>
-    <div class="drive-btns">
-      <button class="btn btn-o btn-sm" onclick="closeDriveModal()">Annuler</button>
-      <button class="btn btn-p btn-sm" onclick="confirmDriveLink()">✅ Insérer le lien dans la note</button>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
