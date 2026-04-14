@@ -269,40 +269,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   transition:all var(--tr); white-space:nowrap;
 }
 .ja-btn:hover { background:var(--blue-bg); border-color:var(--navy); }
-.ja-input { display:none; }
 .ja-wrap { display:flex; flex-wrap:wrap; gap:7px; margin-top:7px; }
-.ja-thumb {
-  position:relative; width:72px; height:72px;
-  border-radius:6px; overflow:hidden; cursor:pointer;
-  border:2px solid var(--border); flex-shrink:0;
-  transition:transform var(--tr), box-shadow var(--tr);
-}
-.ja-thumb:hover { transform:scale(1.05); box-shadow:var(--sh2); }
-.ja-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-.ja-thumb .ja-del {
-  position:absolute; top:2px; right:2px;
-  background:rgba(0,0,0,.6); color:#fff; border:none;
-  border-radius:50%; width:18px; height:18px; font-size:.65rem;
-  cursor:pointer; display:none; align-items:center; justify-content:center;
-  line-height:1;
-}
-.ja-thumb:hover .ja-del { display:flex; }
-.ja-file {
-  display:flex; align-items:center; gap:7px;
-  padding:6px 10px; background:var(--bg); border-radius:6px;
-  border:1px solid var(--border); font-size:.78rem; cursor:pointer;
-  max-width:200px; transition:background var(--tr); position:relative;
-}
-.ja-file:hover { background:var(--blue-bg); }
-.ja-file .ja-del {
-  position:absolute; top:-6px; right:-6px;
-  background:var(--red); color:#fff; border:none;
-  border-radius:50%; width:16px; height:16px; font-size:.6rem;
-  cursor:pointer; display:none; align-items:center; justify-content:center;
-}
-.ja-file:hover .ja-del { display:flex; }
-.ja-fname { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px; }
-.ja-size { color:var(--muted); font-size:.7rem; flex-shrink:0; }
 
 /* Rendu dans les bulles du journal */
 .jbubble-files { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
@@ -334,7 +301,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 #lightbox-caption { color:rgba(255,255,255,.7); font-size:.82rem; }
 
 /* Compress warning */
-.ja-warn { font-size:.69rem; color:var(--orange); margin-top:3px; }
 
 
 /* ── SharePoint / Loading ──────────────────────────────────────── */
@@ -485,14 +451,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
           <textarea class="jitx" id="fj-input" placeholder="Ajouter une note (optionnel)…" rows="2"></textarea>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
-          <label class="ja-btn" for="fj-files">📎 Joindre fichier / photo</label>
-          <input type="file" id="fj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-            style="display:none" onchange="handleFilePick(this,'fj-preview')">
-          <span id="fj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-          <button class="ja-btn" type="button" onclick="pasteDriveLink('fj-input')" title="Copier le lien dans Drive puis cliquer ici">📋 Coller lien Drive</button>
+          <button class="ja-btn" type="button" onclick="pasteLink('fj-input')" title="Copier un lien SharePoint/OneDrive puis cliquer ici">📋 Coller lien SharePoint</button>
         </div>
-        <div class="ja-wrap" id="fj-preview"></div>
-        <div class="jhelp">La note sera horodatée à l'enregistrement · Images compressées auto</div>
+        <div class="jhelp">La note sera horodatée à l'enregistrement · Copiez le lien depuis SharePoint/OneDrive</div>
       </div>
       </div>
     </div>
@@ -545,14 +506,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <button class="jisend" onclick="addNote()">✉️ Envoyer</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
-        <label class="ja-btn" for="dj-files">📎 Joindre fichier / photo</label>
-        <input type="file" id="dj-files" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-          style="display:none" onchange="handleFilePick(this,'dj-preview')">
-        <span id="dj-warn" style="font-size:.69rem;color:var(--orange)"></span>
-        <button class="ja-btn" type="button" onclick="pasteDriveLink('dj-input')" title="Copier le lien dans Drive puis cliquer ici">📋 Coller lien Drive</button>
+        <button class="ja-btn" type="button" onclick="pasteLink('dj-input')" title="Copier un lien SharePoint/OneDrive puis cliquer ici">📋 Coller lien SharePoint</button>
       </div>
-      <div class="ja-wrap" id="dj-preview"></div>
-      <div class="jhelp">Ctrl+Entrée pour envoyer · Images compressées auto</div>
+      <div class="jhelp">Ctrl+Entrée pour envoyer · Copiez le lien depuis SharePoint/OneDrive</div>
     </div>
     </div>
   </div></div>
@@ -931,16 +887,8 @@ function addNote(){
   const a = DB.find(x=>x.id===detailId);
   if(!a) return;
   a.journal = a.journal||[];
-  const entry = {
-    ts: new Date().toISOString(),
-    author: a.responsable||'Richard Denis',
-    text: txt || '📎 Pièce(s) jointe(s)'
-  };
-  if (pendingFiles['dj-preview'].length) {
-    entry.attachments = [...pendingFiles['dj-preview']];
-    clearPending('dj-preview');
-  }
-  if (!txt && !entry.attachments) return;
+  if (!txt) return;
+  const entry = {ts:new Date().toISOString(),author:a.responsable||'Richard Denis',text:txt};
   a.journal.push(entry);
   persist();
   inp.value='';
@@ -1056,7 +1004,6 @@ function resetForm(){
   document.getElementById('fj-list').innerHTML='<div class="jempty">Journal vide — les notes apparaîtront ici.</div>';
   document.getElementById('fj-cnt').textContent='0';
   document.getElementById('arch-hint').classList.remove('show');
-  clearPending('fj-preview');
 }
 
 function startEdit(id){
@@ -1149,10 +1096,8 @@ function saveAction(){
     // ── CRÉATION ──────────────────────────────────────────────────────────────
     const now = new Date().toISOString();
     const j = [];
-    if(noteText || pendingFiles['fj-preview'].length){
-      const fEntry={ts:now,author:responsable,text:noteText||'📎 Pièce(s) jointe(s)'};
-      if(pendingFiles['fj-preview'].length){fEntry.attachments=[...pendingFiles['fj-preview']];}
-      j.push(fEntry); clearPending('fj-preview');
+    if(noteText){
+      j.push({ts:now,author:responsable,text:noteText});
     }
     const a = {
       id:            nextId(),
@@ -1288,190 +1233,38 @@ document.getElementById('file-imp').onchange=e=>{
 
 // ═══ PIÈCES JOINTES ════════════════════════════════════════════════════════════
 // Stockage temporaire des fichiers en attente (avant envoi de la note)
-const pendingFiles = { 'fj-preview': [], 'dj-preview': [] };
 
-// Compression image canvas
-function compressImage(file, maxPx=1200, quality=0.80) {
-  return new Promise(resolve => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      let w = img.width, h = img.height;
-      if (w > maxPx || h > maxPx) {
-        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
-        else        { w = Math.round(w * maxPx / h); h = maxPx; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      resolve({ dataUrl: canvas.toDataURL('image/jpeg', quality), name: file.name, type: 'image/jpeg', size: 0 });
-    };
-    img.src = url;
-  });
-}
 
-// Lire un fichier non-image en base64
-function readFile(file) {
-  return new Promise(resolve => {
-    const r = new FileReader();
-    r.onload = e => resolve({ dataUrl: e.target.result, name: file.name, type: file.type, size: file.size });
-    r.readAsDataURL(file);
-  });
-}
 
-function humanSize(bytes) {
-  if (bytes < 1024) return bytes + ' o';
-  if (bytes < 1048576) return (bytes/1024).toFixed(0) + ' Ko';
-  return (bytes/1048576).toFixed(1) + ' Mo';
-}
 
-function fileIcon(type) {
-  if (type.includes('pdf'))  return '📄';
-  if (type.includes('word') || type.includes('doc')) return '📝';
-  if (type.includes('sheet') || type.includes('xls')) return '📊';
-  return '📎';
-}
 
-async function handleFilePick(input, previewId) {
-  const warnEl = document.getElementById(input.id.replace('files','warn'));
-  const files  = Array.from(input.files);
-  let warnings = [];
 
-  for (const file of files) {
-    let entry;
-    const isImg = file.type.startsWith('image/');
 
-    if (file.size > 50 * 1024 * 1024 && !isImg) {
-      warnings.push(`${file.name} trop lourd (max 50 Mo)`);
-      continue;
-    }
 
-    if (SP_MODE) {
-      // ── Mode SharePoint : upload réel, on stocke l'URL ──────────────────────
-      try {
-        let blob;
-        let uploadName = file.name;
-        if (isImg) {
-          // Compression avant upload
-          const compressed = await compressImage(file);
-          const res = await fetch(compressed.dataUrl);
-          blob = await res.blob();
-          uploadName = file.name.replace(/\.[^.]+$/, '.jpg');
-          const origKo = Math.round(file.size/1024);
-          const newKo  = Math.round(blob.size/1024);
-          if (origKo > newKo + 20) warnings.push(`${file.name} : ${origKo} Ko → ${newKo} Ko (compressé)`);
-        } else {
-          blob = file;
-        }
-        spStatus('saving', `📤 Upload de ${file.name}…`);
-        const url = await spUploadFile(blob, uploadName);
-        entry = { url, name: file.name, type: file.type, spFile: true, size: blob.size };
-        spStatus('ok', `✅ ${file.name} uploadé sur SharePoint`);
-      } catch(e) {
-        warnings.push(`${file.name} : échec upload SharePoint`);
-        console.error('SP upload failed:', e);
-        continue;
-      }
-    } else {
-      // ── Mode local : base64 (limite 3 Mo) ───────────────────────────────────
-      if (file.size > 3 * 1024 * 1024 && !isImg) {
-        warnings.push(`${file.name} trop lourd en mode local (max 3 Mo)`);
-        continue;
-      }
-      if (isImg) {
-        entry = await compressImage(file);
-        const origKo = Math.round(file.size/1024);
-        const newKo  = Math.round(entry.dataUrl.length * 3/4 / 1024);
-        if (origKo > newKo + 20) warnings.push(`${file.name} : ${origKo} Ko → ${newKo} Ko`);
-      } else {
-        entry = await readFile(file);
-      }
-    }
 
-    pendingFiles[previewId].push(entry);
-    renderPending(previewId);
-  }
 
-  warnEl.textContent = warnings.length ? '⚠️ ' + warnings.join(' · ') : '';
-  input.value = '';
-}
 
-function renderPending(previewId) {
-  const wrap = document.getElementById(previewId);
-  const files = pendingFiles[previewId];
-  wrap.innerHTML = files.map((f, i) => {
-    const src  = f.url || f.dataUrl || '';
-    const isImg = f.type && f.type.startsWith('image/');
-    // Lien Drive
-    if (f.type === 'drive') {
-      return `<div class="ja-file" onclick="window.open('${src}','_blank')" style="border-color:#4285F4;background:#f0f4ff">
-        <span>${f.icon||'🔗'}</span>
-        <span class="ja-fname" title="${esc(f.name)}">${esc(f.name)}</span>
-        <span class="ja-size" style="color:#4285F4;font-weight:600">Drive</span>
-        <button class="ja-del" onclick="event.stopPropagation();removePending('${previewId}',${i})">✕</button>
-      </div>`;
-    }
-    if (isImg) {
-      return `<div class="ja-thumb">
-        <img src="${src}" alt="${esc(f.name)}" onclick="openLightbox('${src}','${esc(f.name)}')">
-        <button class="ja-del" onclick="removePending('${previewId}',${i})" title="Supprimer">✕</button>
-      </div>`;
-    } else {
-      return `<div class="ja-file" onclick="${f.spFile ? `window.open('${src}','_blank')` : `downloadFile('${src}','${esc(f.name)}')`}">
-        <span>${fileIcon(f.type||'')}</span>
-        <span class="ja-fname" title="${esc(f.name)}">${esc(f.name)}</span>
-        <span class="ja-size">${humanSize(f.size||0)}</span>
-        <button class="ja-del" onclick="event.stopPropagation();removePending('${previewId}',${i})">✕</button>
-      </div>`;
-    }
-  }).join('');
-}
 
-function removePending(previewId, i) {
-  pendingFiles[previewId].splice(i, 1);
-  renderPending(previewId);
-}
+// Rétrocompatibilité : afficher les anciennes pièces jointes base64
 
-function clearPending(previewId) {
-  pendingFiles[previewId] = [];
-  const wrap = document.getElementById(previewId);
-  if (wrap) wrap.innerHTML = '';
-  const warn = document.getElementById(previewId.replace('preview','warn'));
-  if (warn) warn.textContent = '';
-}
-
-// Rendu des fichiers dans les bulles du journal (lecture seule)
 function renderAttachments(attachments) {
   if (!attachments || !attachments.length) return '';
-  return '<div class="jbubble-files">' + attachments.map(f => {
-    // Supports both: { url: '...' } (SharePoint) and { dataUrl: '...' } (local base64)
-    const src = f.url || f.dataUrl || '';
-    const isImg = f.type && f.type.startsWith('image/');
-    // Lien Google Drive
-    if (f.type === 'drive') {
-      return `<a class="jbf-drive" href="${src}" target="_blank" rel="noopener" title="${esc(f.name)}">
-        <span class="drive-ic">${f.icon||'🔗'}</span>
-        <span class="drive-nm">${esc(f.name)}</span>
-        <span class="drive-badge">Drive</span>
-      </a>`;
-    }
-    if (isImg) {
-      return `<div class="jbf-img" onclick="openLightbox('${src}','${esc(f.name)}')" title="${esc(f.name)}">
-        <img src="${src}" alt="${esc(f.name)}">
-      </div>`;
+  var out = '<div class="jbubble-files">';
+  for (var i=0; i<attachments.length; i++) {
+    var f   = attachments[i];
+    var src = f.url || f.dataUrl || '';
+    var nm  = esc(f.name || '');
+    if (f.type && f.type.startsWith('image/')) {
+      out += '<div class="jbf-img" onclick="openLightbox(this.dataset.src,this.dataset.nm)" ';
+      out += 'data-src="' + src.replace(/"/g,'&quot;') + '" ';
+      out += 'data-nm="'  + nm.replace(/"/g,'&quot;') + '" ';
+      out += 'title="' + nm + '"><img src="' + src + '" alt="' + nm + '"></div>';
     } else {
-      const dl = f.spFile ? '' : `download="${esc(f.name)}"`;
-      return `<a class="jbf-doc" href="${src}" ${dl} target="_blank" rel="noopener" title="${esc(f.name)}">
-        ${fileIcon(f.type||'')} <span>${esc(f.name)}</span>
-      </a>`;
+      out += '<a class="jbf-doc" href="' + src + '" target="_blank" rel="noopener">' + nm + '</a>';
     }
-  }).join('') + '</div>';
-}
-
-function downloadFile(dataUrl, name) {
-  const a = document.createElement('a');
-  a.href = dataUrl; a.download = name; a.click();
+  }
+  out += '</div>';
+  return out;
 }
 
 // Lightbox
@@ -1487,127 +1280,42 @@ function closeLightbox() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
 
-// ═══ GOOGLE DRIVE LINKS ════════════════════════════════════════════════════════
-let _driveTargetPreview = null;
 
-function openDriveModal(previewId) {
-  _driveTargetPreview = previewId;
-  document.getElementById('drive-url').value  = '';
-  document.getElementById('drive-name').value = '';
-  document.getElementById('drive-preview').classList.remove('show');
-  document.getElementById('drive-modal').classList.add('open');
-  setTimeout(() => document.getElementById('drive-url').focus(), 100);
+// === COLLER LIEN SHAREPOINT / ONEDRIVE ===
+function linkLabel(url) {
+  var u = url.toLowerCase();
+  if (u.indexOf('sharepoint.com') >= 0) return '📁 SharePoint';
+  if (u.indexOf('onedrive.live')  >= 0) return '☁️ OneDrive';
+  if (u.indexOf('1drv.ms')        >= 0) return '☁️ OneDrive';
+  if (u.indexOf('drive.google')   >= 0) return '📄 Google Drive';
+  if (u.indexOf('docs.google')    >= 0) return '📝 Google Docs';
+  if (u.indexOf('.pdf')           >= 0) return '📄 PDF';
+  if (u.indexOf('.jpg') >= 0 || u.indexOf('.png') >= 0) return '🖼 Image';
+  if (u.indexOf('.doc')           >= 0) return '📝 Document';
+  if (u.indexOf('.xls')           >= 0) return '📊 Tableur';
+  return '🔗 Lien';
 }
-
-function closeDriveModal() {
-  document.getElementById('drive-modal').classList.remove('open');
-  _driveTargetPreview = null;
-}
-
-// Détecter le type de fichier depuis l'URL Drive
-function driveFileType(url) {
-  if (url.includes('/document/'))    return { icon:'📝', label:'Google Docs' };
-  if (url.includes('/spreadsheets/'))return { icon:'📊', label:'Google Sheets' };
-  if (url.includes('/presentation/'))return { icon:'📊', label:'Google Slides' };
-  if (url.includes('/file/'))        return { icon:'📄', label:'Fichier Drive' };
-  if (url.includes('docs.google'))   return { icon:'📝', label:'Google Docs' };
-  return { icon:'🔗', label:'Google Drive' };
-}
-
-// Extraire l'ID Drive depuis l'URL pour construire un lien direct
-function driveDirectUrl(url) {
-  // Format: https://drive.google.com/file/d/[ID]/view
-  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
-  // Format: https://docs.google.com/...
-  if (url.includes('docs.google.com') || url.includes('drive.google.com')) return url;
-  return url;
-}
-
-function onDriveUrlChange(url) {
-  const prev    = document.getElementById('drive-preview');
-  const prevName= document.getElementById('drive-prev-name');
-  const prevType= document.getElementById('drive-prev-icon');
-  const prevLbl = document.getElementById('drive-prev-type');
-
-  if (!url || (!url.includes('drive.google') && !url.includes('docs.google'))) {
-    prev.classList.remove('show');
-    return;
-  }
-  const ft = driveFileType(url);
-  prevType.textContent = ft.icon;
-  prevLbl.textContent  = ft.label;
-  const nameInput = document.getElementById('drive-name').value;
-  prevName.textContent = nameInput || 'Fichier Google Drive';
-  prev.classList.add('show');
-}
-
-
-
-function confirmDriveLink() {
-  const url  = document.getElementById('drive-url').value.trim();
-  const name = document.getElementById('drive-name').value.trim() || 'Fichier Google Drive';
-
-  if (!url) { toast('Colle un lien Google Drive', 'error'); return; }
-  if (!url.includes('google.com')) { toast('Ce lien ne semble pas être un lien Google Drive', 'error'); return; }
-
-  const direct = driveDirectUrl(url);
-
-  // Insérer le lien dans le textarea actif (formulaire ou détail)
-  const taId = _driveTargetPreview === 'fj-preview' ? 'fj-input' : 'dj-input';
-  const ta   = document.getElementById(taId);
-  if (ta) {
-    const linkText = `\n📎 ${name} → ${direct}`;
-    const pos = ta.selectionStart || ta.value.length;
-    ta.value = ta.value.slice(0, pos) + linkText + ta.value.slice(pos);
-    ta.focus();
-    ta.selectionStart = ta.selectionEnd = pos + linkText.length;
-  }
-
-  closeDriveModal();
-  toast('Lien inséré dans la note ✓', 'success');
-}
-
-// Fermeture modale gérée via onclick sur le div
-
-
-// ═══ GOOGLE DRIVE — COLLER DEPUIS PRESSE-PAPIER ══════════════════════════════
-function driveDirectUrl(url) {
-  const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (m) return 'https://drive.google.com/file/d/' + m[1] + '/view';
-  return url;
-}
-function driveLabel(url) {
-  if (url.includes('/document/'))     return '📝 Google Doc';
-  if (url.includes('/spreadsheets/')) return '📊 Google Sheet';
-  if (url.includes('/presentation/')) return '📊 Google Slides';
-  if (url.includes('/file/'))         return '📄 Fichier Drive';
-  return '🔗 Google Drive';
-}
-async function pasteDriveLink(textareaId) {
-  let url = '';
-  try {
-    url = await navigator.clipboard.readText();
-  } catch(e) {
-    url = prompt('Colle le lien Google Drive :') || '';
-  }
+async function pasteLink(textareaId) {
+  var url = '';
+  try { url = await navigator.clipboard.readText(); }
+  catch(e) { url = prompt('Colle le lien SharePoint / OneDrive :') || ''; }
   url = url.trim();
   if (!url) return;
-  if (!url.includes('google.com') && !url.includes('drive.')) {
-    toast('Le presse-papier ne contient pas un lien Google Drive', 'error');
+  if (url.indexOf('http') !== 0) {
+    toast('Le presse-papier ne contient pas un lien valide', 'error');
     return;
   }
-  const direct = driveDirectUrl(url);
-  const label  = driveLabel(url);
-  const ta     = document.getElementById(textareaId);
+  var label    = linkLabel(url);
+  var ta       = document.getElementById(textareaId);
   if (!ta) return;
-  const pos      = ta.selectionStart !== undefined ? ta.selectionStart : ta.value.length;
-  const prefix   = (ta.value.length > 0 && !ta.value.endsWith('\n')) ? '\n' : '';
-  const linkText = prefix + '\u{1F4CE} ' + label + ' \u2192 ' + direct;
+  var pos      = ta.selectionStart !== undefined ? ta.selectionStart : ta.value.length;
+  var last     = ta.value.length > 0 ? ta.value[ta.value.length - 1] : '';
+  var prefix   = (last !== '' && last !== '\n') ? '\n' : '';
+  var linkText = prefix + label + ' -> ' + url;
   ta.value = ta.value.slice(0, pos) + linkText + ta.value.slice(pos);
   ta.focus();
   ta.selectionStart = ta.selectionEnd = pos + linkText.length;
-  toast('\u2705 Lien Drive inséré dans la note', 'success');
+  toast('Lien insere dans la note', 'success');
 }
 
 // ═══ ARCHIVES ═════════════════════════════════════════════════════════════════
