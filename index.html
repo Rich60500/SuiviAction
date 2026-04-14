@@ -1179,21 +1179,19 @@ function deleteAction(){
 }
 
 // ═══ ARCHIVAGE ════════════════════════════════════════════════════════════════
-function archiveFromList(id){
+async function archiveFromList(id){
   const a = DB.find(x=>x.id===id);
   if(!a) return;
   if(!confirm('Archiver « '+a.dossier+' » ?\nElle sera déplacée dans les archives.')) return;
-  // Marquer + horodater
   a.statut     = 'Terminée';
   a.avancement = 100;
   a.archivedAt = new Date().toISOString();
   a.journal    = a.journal||[];
   a.journal.push({ts:new Date().toISOString(),author:a.responsable||'Richard Denis',text:'🗄️ Action archivée manuellement.'});
-  // Déplacer immédiatement dans ARCH
   ARCH.push(a);
   DB = DB.filter(x=>x.id!==id);
-  persist();
-  persistArchives();
+  await persist();
+  await persistArchives();
   renderList();
   renderDash();
   updateArchBadge();
