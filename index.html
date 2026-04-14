@@ -337,6 +337,62 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 
 
+
+/* ── Notifications ───────────────────────────────────────────────── */
+.notif-bar {
+  display:none; align-items:center; gap:10px;
+  padding:10px 16px; border-radius:8px; margin-bottom:16px;
+  background:var(--blue-bg); border:1px solid #a9c4e0;
+  font-size:.84rem; color:var(--navy);
+}
+.notif-bar.show { display:flex; }
+.notif-bar button { margin-left:auto; }
+
+/* ── Recherche journal ───────────────────────────────────────────── */
+.journal-search {
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:8px;
+}
+.journal-search input {
+  flex:1; padding:6px 10px 6px 30px;
+  border:1.5px solid var(--border); border-radius:6px;
+  font-size:.82rem; outline:none;
+  transition:border-color var(--tr);
+}
+.journal-search input:focus { border-color:var(--navy-l); }
+.journal-search .si {
+  position:absolute; left:9px; top:50%;
+  transform:translateY(-50%); font-size:.8rem;
+  color:var(--muted); pointer-events:none;
+}
+.journal-search-wrap { position:relative; flex:1; }
+.jresult-count {
+  font-size:.72rem; color:var(--muted);
+  font-family:'DM Mono',monospace; flex-shrink:0;
+}
+.jhi { background:#fff3b0; border-radius:2px; }
+
+/* ── Export PDF / Print ──────────────────────────────────────────── */
+@media print {
+  #sidebar, #topbar, .bgrp, .btn, .jia,
+  .journal-search, #sp-status, #loading-overlay,
+  .arch-hint, #drive-modal, #lightbox { display:none !important; }
+  #main { margin-left:0 !important; }
+  .view { display:block !important; padding:0 !important; }
+  .view:not(#view-detail) { display:none !important; }
+  #view-detail { display:block !important; }
+  .card { box-shadow:none !important; border:1px solid #ccc; }
+  .print-header { display:block !important; }
+}
+.print-header {
+  display:none;
+  font-family:'Outfit',sans-serif;
+  padding-bottom:12px; margin-bottom:16px;
+  border-bottom:2px solid var(--navy);
+}
+.print-header h1 { font-size:1.3rem; color:var(--navy); margin-bottom:4px; }
+.print-header .ph-meta { font-size:.8rem; color:var(--muted); }
+
 </style>
 </head>
 <body>
@@ -381,7 +437,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <section class="view active" id="view-dashboard">
   <div class="vh">
     <div><div class="vt">Tableau de bord</div><div class="vs" id="dash-date"></div></div>
-    <button class="btn btn-g" onclick="newAction()">➕ Nouvelle action</button>
+    <div class="bgrp">
+      <button class="btn btn-o btn-sm" id="btn-notif" onclick="requestNotifPermission()" title="Activer les rappels d'échéance">🔔 Activer les rappels</button>
+      <button class="btn btn-g" onclick="newAction()">➕ Nouvelle action</button>
+    </div>
   </div>
   <div class="kgrid">
     <div class="kcard red"><div class="kl">🔴 Non commencées</div><div class="kv" id="k-nc">0</div></div>
@@ -469,10 +528,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <!-- DETAIL -->
 <section class="view" id="view-detail">
   <div class="vh">
-    <div><div class="vt" id="det-dossier">—</div><div class="vs" id="det-source">—</div></div>
+    <div><div class="print-header" id="print-header">
+      <h1 id="print-dossier">—</h1>
+      <div class="ph-meta" id="print-meta"></div>
+    </div>
+    <div class="vt" id="det-dossier">—</div><div class="vs" id="det-source">—</div></div>
     <div class="bgrp">
       <button class="btn btn-p" onclick="editCurrentDetail()">✏️ Modifier</button>
       <button class="btn-arch" id="btn-arch-det" style="display:none" onclick="archiveFromDetail()">🗄️ Archiver</button>
+      <button class="btn btn-o btn-sm" onclick="printAction()" title="Exporter / Imprimer">🖨️ PDF</button>
       <button class="btn btn-o" onclick="nav('actions')">← Retour</button>
     </div>
   </div>
@@ -499,6 +563,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <!-- Journal détail -->
     <div>
       <div class="jlbl"><span>📝 Journal de suivi</span><span class="jcnt" id="dj-cnt">0</span></div>
+      <div class="journal-search">
+        <div class="journal-search-wrap">
+          <span class="si">🔍</span>
+          <input type="text" id="journal-search-input" placeholder="Rechercher dans les notes…"
+            oninput="searchJournal(this.value)">
+        </div>
+        <span class="jresult-count" id="journal-result-count"></span>
+        <button class="btn btn-o btn-sm" onclick="clearJournalSearch()" id="btn-clear-search" style="display:none">✕</button>
+      </div>
       <div class="jw" id="dj-list"></div>
       <div class="jia"><div class="jir">
         <textarea class="jitx" id="dj-input" placeholder="Ajouter une note…" rows="2"
@@ -712,7 +785,9 @@ async function spUploadFile(blob, filename) {
 // ═══ DONNÉES (load / persist) ═════════════════════════════════════════════════
 async function load() {
   try {
-    if (SP_MODE) {
+    updateNotifBtn();
+  if (Notification.permission === 'granted') scheduleNotifCheck();
+  if (SP_MODE) {
       showLoading('Chargement depuis SharePoint…');
       const data = await spRead(SP.actionsFile);
       DB = (data && data.length) ? data : JSON.parse(JSON.stringify(SAMPLE));
@@ -1316,6 +1391,226 @@ async function pasteLink(textareaId) {
   ta.focus();
   ta.selectionStart = ta.selectionEnd = pos + linkText.length;
   toast('Lien insere dans la note', 'success');
+}
+
+
+// ═══ 1. NOTIFICATIONS D'ÉCHÉANCE ═════════════════════════════════════════════
+var NOTIF_KEY = 'sncf_notif_sent';
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    toast('Votre navigateur ne supporte pas les notifications', 'error');
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    toast('Rappels déjà activés ✅', 'success');
+    scheduleNotifCheck();
+    return;
+  }
+  var perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    toast('Rappels activés ✅ — vous serez alerté J-7 et J-1 avant chaque échéance', 'success');
+    document.getElementById('btn-notif').textContent = '🔔 Rappels actifs';
+    document.getElementById('btn-notif').style.background = 'var(--green-bg)';
+    scheduleNotifCheck();
+  } else {
+    toast('Permission refusée — activez les notifications dans les paramètres du navigateur', 'error');
+  }
+}
+
+function scheduleNotifCheck() {
+  checkEcheances();
+  // Vérifier toutes les heures
+  setInterval(checkEcheances, 3600000);
+}
+
+function checkEcheances() {
+  if (Notification.permission !== 'granted') return;
+  var sent = {};
+  try { sent = JSON.parse(localStorage.getItem(NOTIF_KEY) || '{}'); } catch(e) {}
+  var now  = new Date();
+  var today = now.toISOString().slice(0,10);
+
+  DB.forEach(function(a) {
+    if (a.statut === 'Terminée' || !a.echeance) return;
+    var diff = Math.round((new Date(a.echeance) - now) / 86400000);
+    var key7 = a.id + '_7_' + today;
+    var key1 = a.id + '_1_' + today;
+
+    if (diff === 7 && !sent[key7]) {
+      sendNotif(
+        'Échéance dans 7 jours',
+        a.dossier + ' — ' + fmtDate(a.echeance),
+        a
+      );
+      sent[key7] = true;
+    }
+    if (diff === 1 && !sent[key1]) {
+      sendNotif(
+        '⚠️ Échéance demain !',
+        a.dossier + ' — ' + fmtDate(a.echeance),
+        a
+      );
+      sent[key1] = true;
+    }
+    if (diff === 0 && !sent[a.id + '_0_' + today]) {
+      sendNotif(
+        "Echeance aujourd'hui !",
+        a.dossier,
+        a
+      );
+      sent[a.id + '_0_' + today] = true;
+    }
+    if (diff < 0 && !sent[a.id + '_late_' + today]) {
+      sendNotif(
+        '🔴 Échéance dépassée de ' + Math.abs(diff) + ' jour(s)',
+        a.dossier,
+        a
+      );
+      sent[a.id + '_late_' + today] = true;
+    }
+  });
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(sent));
+}
+
+function sendNotif(title, body, action) {
+  var n = new Notification('SNCF Suivi Actions — ' + title, {
+    body: body,
+    icon: 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 64 64\'><rect width=\'64\' height=\'64\' rx=\'12\' fill=\'%231A3C6E\'/><text y=\'44\' x=\'8\' font-size=\'42\' fill=\'%23F5A623\'>' + (title.includes('🚨') ? '🚨' : '⚠️') + '</text></svg>',
+    badge: 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 32 32\'><rect width=\'32\' height=\'32\' rx=\'6\' fill=\'%231A3C6E\'/></svg>',
+    tag: 'sncf-action-' + (action ? action.id : 'general'),
+    requireInteraction: title.includes('🚨') || title.includes('dépassée')
+  });
+  if (action) {
+    n.onclick = function() {
+      window.focus();
+      openDetail(action.id);
+      nav('detail');
+    };
+  }
+}
+
+// Mettre à jour le bouton notif selon l'état de la permission
+function updateNotifBtn() {
+  var btn = document.getElementById('btn-notif');
+  if (!btn) return;
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+  } else if (Notification.permission === 'granted') {
+    btn.textContent = '🔔 Rappels actifs';
+    btn.style.background = 'var(--green-bg)';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = '#a9dfbf';
+  }
+}
+
+// ═══ 2. RECHERCHE DANS LE JOURNAL ════════════════════════════════════════════
+var _currentJournal = [];
+var _currentJournalId = null;
+
+function searchJournal(query) {
+  var listEl  = document.getElementById('dj-list');
+  var cntEl   = document.getElementById('dj-cnt');
+  var resEl   = document.getElementById('journal-result-count');
+  var clearBtn= document.getElementById('btn-clear-search');
+
+  if (!_currentJournal.length) return;
+
+  if (!query.trim()) {
+    clearBtn.style.display = 'none';
+    resEl.textContent = '';
+    renderJournal(_currentJournal, 'dj-list', 'dj-cnt', _currentJournalId);
+    return;
+  }
+
+  clearBtn.style.display = 'inline-flex';
+  var q   = query.toLowerCase();
+  var res = _currentJournal.filter(function(e) {
+    return (e.text && e.text.toLowerCase().indexOf(q) >= 0) ||
+           (e.author && e.author.toLowerCase().indexOf(q) >= 0);
+  });
+
+  resEl.textContent = res.length + ' résultat(s)';
+
+  if (!res.length) {
+    listEl.innerHTML = '<div class="jempty">Aucune note ne correspond à "' + query + '"</div>';
+    return;
+  }
+
+  // Afficher avec surlignage
+  var cntEl2 = document.getElementById('dj-cnt');
+  if (cntEl2) cntEl2.textContent = res.length;
+
+  listEl.innerHTML = res.map(function(e, i) {
+    var txt  = esc(e.text || '').replace(
+      new RegExp('(' + query.replace(/[.*+?^${}()|\[\]\\]/g,'\\$&') + ')', 'gi'),
+      '<mark class="jhi">$1</mark>'
+    );
+    var auth = esc(e.author || 'Richard Denis');
+    var av   = _currentJournal.indexOf(e);
+    return '<div class="je">'
+      + '<div class="jav">' + initials(e.author) + '</div>'
+      + '<div class="jb">'
+      + '<div class="jm"><span class="jau">' + auth + '</span>'
+      + '<span class="jt">' + fmtTs(e.ts) + '</span>'
+      + (e.editedAt ? '<span class="jt" style="color:#aaa">(modifié ' + fmtTs(e.editedAt) + ')</span>' : '')
+      + '</div>'
+      + '<div class="jtx" id="dj-list-jtx-' + av + '">' + txt
+      + (e.attachments ? renderAttachments(e.attachments) : '')
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function clearJournalSearch() {
+  var inp = document.getElementById('journal-search-input');
+  if (inp) inp.value = '';
+  searchJournal('');
+}
+
+// Surcharger openDetail pour sauvegarder le journal courant
+var _origOpenDetail = openDetail;
+function openDetail(id) {
+  _origOpenDetail(id);
+  var a = DB.find(function(x){ return x.id===id; });
+  if (a) {
+    _currentJournal   = a.journal || [];
+    _currentJournalId = id;
+  }
+  // Reset recherche
+  var inp = document.getElementById('journal-search-input');
+  if (inp) inp.value = '';
+  clearJournalSearch();
+}
+
+// ═══ 3. EXPORT PDF / IMPRESSION ══════════════════════════════════════════════
+function printAction() {
+  if (!detailId) return;
+  var a = DB.find(function(x){ return x.id===detailId; });
+  if (!a) return;
+
+  // Remplir le print-header
+  var ph = document.getElementById('print-header');
+  var pd = document.getElementById('print-dossier');
+  var pm = document.getElementById('print-meta');
+  if (ph) ph.style.display = 'block';
+  if (pd) pd.textContent = a.dossier;
+  if (pm) pm.textContent = [
+    'Criticité : ' + a.criticite,
+    'Statut : ' + a.statut,
+    'Avancement : ' + a.avancement + '%',
+    'Échéance : ' + fmtDate(a.echeance),
+    'Responsable : ' + (a.responsable || '—'),
+    'Imprimé le : ' + new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  ].join(' | ');
+
+  window.print();
+
+  // Masquer après impression
+  setTimeout(function() {
+    if (ph) ph.style.display = 'none';
+  }, 1000);
 }
 
 // ═══ ARCHIVES ═════════════════════════════════════════════════════════════════
