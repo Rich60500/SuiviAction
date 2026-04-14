@@ -399,6 +399,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
     <div class="fn">Richard Denis</div>
     <div class="fo">SNCF Gares &amp; Connexions</div>
     <span id="last-saved"></span>
+    <span style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:4px;display:block">v14-04-2026-B</span>
   </div>
 </nav>
 
@@ -971,6 +972,14 @@ function renderDash(){
 }
 
 // ═══ LISTE ════════════════════════════════════════════════════════════════════
+function btnActions(a){
+  let b = '<button class="btn btn-o btn-sm" onclick="event.stopPropagation();startEdit('+a.id+')" title="Modifier">✏️</button>';
+  if(a.statut==='Terminée'){
+    b += '<button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border:1px solid #a9dfbf;margin-left:4px" onclick="event.stopPropagation();archiveFromList('+a.id+')" title="Archiver">🗄️</button>';
+  }
+  return b;
+}
+
 function renderList(){
   const q=(document.getElementById('search').value||''). toLowerCase();
   const fs=document.getElementById('f-stat').value;
@@ -1000,10 +1009,7 @@ function renderList(){
     <td>${sBadge(a.statut)}</td>
     <td>${pBar(a.avancement)}</td>
     <td>${daysHtml(a.echeance,a.statut)}</td>
-    <td style="white-space:nowrap">
-      <button class="btn btn-o btn-sm" onclick="event.stopPropagation();startEdit(${a.id})" title="Modifier">✏️</button>
-      ${a.statut==='Terminée' ? `<button class="btn btn-sm" style="background:var(--green-bg);color:var(--green);border:1px solid #a9dfbf;margin-left:4px" onclick="event.stopPropagation();archiveFromList(${a.id})" title="Archiver">🗄️</button>` : ''}
-    </td>
+    <td style="white-space:nowrap">${btnActions(a)}</td>
   </tr>`).join('');
 }
 
@@ -1179,22 +1185,26 @@ function deleteAction(){
 }
 
 // ═══ ARCHIVAGE ════════════════════════════════════════════════════════════════
-async function archiveFromList(id){
-  const a = DB.find(x=>x.id===id);
-  if(!a) return;
-  if(!confirm('Archiver « '+a.dossier+' » ?\nElle sera déplacée dans les archives.')) return;
+
+
+
+function archiveFromList(id){
+  var idx = DB.findIndex(function(x){return x.id===id;});
+  if(idx<0) return;
+  var a = DB[idx];
+  if(!confirm('Archiver "'+a.dossier+'" ?\nElle sera déplacée dans les archives.')) return;
   a.statut     = 'Terminée';
   a.avancement = 100;
   a.archivedAt = new Date().toISOString();
   a.journal    = a.journal||[];
-  a.journal.push({ts:new Date().toISOString(),author:a.responsable||'Richard Denis',text:'🗄️ Action archivée manuellement.'});
-  ARCH.push(a);
-  DB = DB.filter(x=>x.id!==id);
-  await persist();
-  await persistArchives();
+  a.journal.push({ts:new Date().toISOString(),author:a.responsable||'Richard Denis',text:'Action archivée manuellement.'});
+  ARCH.push(JSON.parse(JSON.stringify(a)));
+  DB.splice(idx,1);
+  localStorage.setItem('sncf_v3', JSON.stringify(DB));
+  localStorage.setItem('sncf_archives_v3', JSON.stringify(ARCH));
+  updateArchBadge();
   renderList();
   renderDash();
-  updateArchBadge();
   toast('Action archivée ✓','success');
 }
 
