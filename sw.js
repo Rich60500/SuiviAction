@@ -1,6 +1,6 @@
 // Service Worker — Suivi Actions SNCF
 // Base path GitHub Pages : /SuiviAction/
-const CACHE   = 'sncf-actions-v14';
+const CACHE   = 'sncf-actions-v15';
 const BASE    = '/SuiviAction';
 const ASSETS  = [
   `${BASE}/`,
@@ -57,4 +57,8 @@ self.addEventListener('fetch', e => {
       )
       .catch(() => caches.match(`${BASE}/index.html`))
   );
+});
+
+self.addEventListener('message', function(e){
+  if(e.data && e.data.type==='SKIP_WAITING') self.skipWaiting();
 });

@@ -1521,7 +1521,25 @@ document.querySelectorAll('.ni[data-view]').forEach(el=>{
 });
 
 // ═══ PWA ══════════════════════════════════════════════════════════════════════
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    reg.addEventListener('updatefound', function(){
+      var newSW = reg.installing;
+      newSW.addEventListener('statechange', function(){
+        if(newSW.state==='installed' && navigator.serviceWorker.controller){
+          // Nouvelle version disponible - recharger automatiquement
+          newSW.postMessage({type:'SKIP_WAITING'});
+          window.location.reload();
+        }
+      });
+    });
+  }).catch(function(){});
+  // Recharger quand le SW prend le contrôle
+  var refreshed = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(!refreshed){ refreshed=true; window.location.reload(); }
+  });
+}
 
 // ═══ INIT ══════════════════════════════════════════════════════════════════════
 (async () => {
