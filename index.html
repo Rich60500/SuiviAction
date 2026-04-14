@@ -1087,12 +1087,16 @@ function startEdit(id){
 function onSlide(v){
   const pct = parseInt(v);
   document.getElementById('f-pct-lbl').textContent = v+'%';
-  // Auto "En cours" si avancement > 0 et pas encore Terminée
   const statSel = document.getElementById('fst');
-  if(pct > 0 && statSel.value === 'Non commencée') {
+  if(pct === 100) {
+    statSel.value = 'Terminée';
+    document.getElementById('arch-hint').classList.add('show');
+  } else if(pct > 0 && statSel.value === 'Non commencée') {
     statSel.value = 'En cours';
+    document.getElementById('arch-hint').classList.remove('show');
+  } else {
+    document.getElementById('arch-hint').classList.remove('show');
   }
-  document.getElementById('arch-hint').classList.toggle('show', pct>=100 && statSel.value!=='Terminée');
 }
 
 function onStatutChange(val){
@@ -1676,7 +1680,7 @@ function reopenArchive(id) {
   const a = ARCH[idx];
   if (!confirm('Rouvrir « ' + a.dossier + ' » dans les actions actives ?\nLe statut sera remis à "En cours".')) return;
   a.statut = 'En cours';
-  a.avancement = Math.min(a.avancement, 99);
+  a.avancement = 0;
   a.updatedAt = new Date().toISOString();
   a.journal = a.journal || [];
   a.journal.push({ ts: new Date().toISOString(), author: a.responsable || 'Richard Denis', text: '🔄 Action réouverte depuis les archives.' });
