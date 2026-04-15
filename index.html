@@ -1059,9 +1059,12 @@ function openDetail(id){
   archBtn.style.display=(a.avancement>=100&&a.statut!=='Terminée')?'inline-flex':'none';
   _currentJournal=a.journal||[];
   _currentJournalId=id;
-  var _jsp=document.getElementById('journal-search-input');
-  if(_jsp){_jsp.value='';searchJournal('');}
   nav('detail');
+  // Reset recherche APRES nav (le DOM est dispo)
+  setTimeout(function(){
+    var _jsp=document.getElementById('journal-search-input');
+    if(_jsp) _jsp.value='';
+  }, 0);
 }
 function editCurrentDetail(){
   if(detailId) startEdit(detailId);
