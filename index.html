@@ -1057,6 +1057,10 @@ function openDetail(id){
   // Bouton archiver
   const archBtn=document.getElementById('btn-arch-det');
   archBtn.style.display=(a.avancement>=100&&a.statut!=='Terminée')?'inline-flex':'none';
+  _currentJournal=a.journal||[];
+  _currentJournalId=id;
+  var _jsp=document.getElementById('journal-search-input');
+  if(_jsp){_jsp.value='';searchJournal('');}
   nav('detail');
 }
 function editCurrentDetail(){
@@ -1569,20 +1573,7 @@ function clearJournalSearch() {
   searchJournal('');
 }
 
-// Surcharger openDetail pour sauvegarder le journal courant
-var _origOpenDetail = openDetail;
-function openDetail(id) {
-  _origOpenDetail(id);
-  var a = DB.find(function(x){ return x.id===id; });
-  if (a) {
-    _currentJournal   = a.journal || [];
-    _currentJournalId = id;
-  }
-  // Reset recherche
-  var inp = document.getElementById('journal-search-input');
-  if (inp) inp.value = '';
-  clearJournalSearch();
-}
+// journal search state géré dans openDetail
 
 // ═══ 3. EXPORT PDF / IMPRESSION ══════════════════════════════════════════════
 function printAction() {
